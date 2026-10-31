@@ -1,3 +1,4 @@
+
 name: Build Android APK
 
 on:
@@ -24,13 +25,29 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android packages
+        run: |
+          sdkmanager --sdk_root="$ANDROID_HOME" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+          test -x "$ANDROID_HOME/build-tools/35.0.0/aidl"
+
       - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y git zip unzip autoconf libtool \
-            pkg-config zlib1g-dev libncurses5-dev cmake \
-            libffi-dev libssl-dev automake libltdl-dev
+            pkg-config zlib1g-dev libncurses5-dev \
+            libncursesw5-dev libtinfo6 cmake libffi-dev \
+            libssl-dev automake libltdl-dev
           pip install buildozer==1.6.0 Cython==0.29.37
+
+      - name: Configure Buildozer SDK
+        run: |
+          python -c "import os,pathlib; p=pathlib.Path('buildozer.spec'); s=p.read_text(); line='android.sdk_path = '+os.environ['ANDROID_HOME']; s=s.replace('android.api = 35', 'android.api = 35\n'+line) if 'android.sdk_path =' not in s else s; p.write_text(s)"
 
       - name: Build APK
         run: buildozer -v android debug
